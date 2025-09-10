@@ -15,3 +15,7 @@ Test Flutter Intern
 
    ```bash
    git clone https://github.com/lehongquyme/TestFlutterIntern.git
+
+2. Video:
+   https://youtube.com/shorts/cSOMAaxGZWM?si=PIjr4rYc4lXFgTYa
+   
