@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../viewmodels/search_provider.dart';
+import 'package:map_launcher/map_launcher.dart';
+import 'dart:io';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -27,6 +29,48 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
+  Future<void> _openMap(double lat, double lon, String title) async {
+    try {
+      if (await MapLauncher.isMapAvailable(MapType.apple) ?? false) {
+        await MapLauncher.showMarker(
+          mapType: MapType.apple,
+          coords: Coords(lat, lon),
+          title: title,
+        );
+      } else if (await MapLauncher.isMapAvailable(MapType.google) ?? false) {
+        await MapLauncher.showMarker(
+          mapType: MapType.google,
+          coords: Coords(lat, lon),
+          title: title,
+        );
+      }
+
+// Android
+      if (await MapLauncher.isMapAvailable(MapType.google) ?? false) {
+        await MapLauncher.showMarker(
+          mapType: MapType.google,
+          coords: Coords(lat, lon),
+          title: title,
+        );
+      }
+      else {
+          final url =
+              'https://www.google.com/maps/search/?api=1&query=$lat,$lon';
+          if (await canLaunchUrl(Uri.parse(url))) {
+            await launchUrl(
+              Uri.parse(url),
+              mode: LaunchMode.externalApplication,
+            );
+          }
+        }
+
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Không thể mở bản đồ: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final searchProvider = context.watch<SearchProvider>();
@@ -47,28 +91,30 @@ class _SearchScreenState extends State<SearchScreen> {
                         )
                       : Icon(Icons.search),
                 ),
-                Expanded(child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                  child: TextField(
-                    controller: _controller,
-                    onChanged: (value) =>
-                        context.read<SearchProvider>().search(value),
-                    textAlignVertical: TextAlignVertical.center,
-                    decoration: InputDecoration(
-                      hintText: 'Enter keyword',
-                      border: InputBorder.none,
-                      suffixIcon: _controller.text.isEmpty
-                          ? null
-                          : IconButton(
-                              icon: Icon(Icons.cancel_outlined),
-                              onPressed: () {
-                                _controller.clear();
-                                context.read<SearchProvider>().search('');
-                              },
-                            ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                    child: TextField(
+                      controller: _controller,
+                      onChanged: (value) =>
+                          context.read<SearchProvider>().search(value),
+                      textAlignVertical: TextAlignVertical.center,
+                      decoration: InputDecoration(
+                        hintText: 'Enter keyword',
+                        border: InputBorder.none,
+                        suffixIcon: _controller.text.isEmpty
+                            ? null
+                            : IconButton(
+                                icon: Icon(Icons.cancel_outlined),
+                                onPressed: () {
+                                  _controller.clear();
+                                  context.read<SearchProvider>().search('');
+                                },
+                              ),
+                      ),
                     ),
                   ),
-                )),
+                ),
               ],
             ),
             if (searchProvider.error.isNotEmpty)
@@ -87,17 +133,10 @@ class _SearchScreenState extends State<SearchScreen> {
                   return ListTile(
                     title: Text(address.title),
                     subtitle: Text(address.fullAddress),
-                    onTap: () async {
-                      final url =
-                          'https://www.google.com/maps/search/?api=1&query=${address.lat},${address.lon}';
-                      if (await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(
-                          Uri.parse(url),
-                          mode: LaunchMode.externalApplication,
-                        );
-                      }
-                    },
-                    trailing:  Icon(Icons.directions),
+                    onTap: () =>
+                        _openMap(address.lat, address.lon, address.title),
+
+                    trailing: Icon(Icons.directions),
                   );
                 },
               ),
